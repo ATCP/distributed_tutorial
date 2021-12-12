@@ -236,7 +236,7 @@ def train(args):
 
     torch.cuda.set_device(gpu)
     model.cuda(gpu)
-    batch_size = 5
+    batch_size = 1
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda(gpu)
     optimizer = torch.optim.SGD(model.parameters(), 1e-4)
