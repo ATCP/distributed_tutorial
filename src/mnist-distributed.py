@@ -7,9 +7,12 @@ import torchvision.transforms as transforms
 import torch
 import torch.nn as nn
 import torch.distributed as dist
-from apex.parallel import DistributedDataParallel as DDP
-from apex import amp
+import torch.nn.functional as F
 
+#from apex.parallel import DistributedDataParallel as DDP
+#from apex import amp
+from torch.nn.parallel import DistributedDataParallel as DDP
+import torchvision.models as models
 
 def main():
     parser = argparse.ArgumentParser()
@@ -19,13 +22,39 @@ def main():
                         help='number of gpus per node')
     parser.add_argument('-nr', '--nr', default=0, type=int,
                         help='ranking within the nodes')
-    parser.add_argument('--epochs', default=2, type=int, metavar='N',
+    parser.add_argument('--epochs', default=10, type=int, metavar='N',
                         help='number of total epochs to run')
     args = parser.parse_args()
     args.world_size = args.gpus * args.nodes
-    os.environ['MASTER_ADDR'] = '10.57.23.164'
-    os.environ['MASTER_PORT'] = '8888'
+    os.environ['MASTER_ADDR'] = '192.168.233.17'
+    os.environ['MASTER_PORT'] = '12355'
     mp.spawn(train, nprocs=args.gpus, args=(args,))
+    #train(args);
+
+class MyModel(nn.Module):
+    def __init__(self):
+        super(MyModel, self).__init__()
+        self.conv1 = nn.Conv2d(1, 32, 3, 1)
+        self.conv2 = nn.Conv2d(32, 64, 3, 1)
+        self.dropout1 = nn.Dropout(0.25)
+        self.dropout2 = nn.Dropout(0.5)
+        self.fc1 = nn.Linear(9216, 128)
+        self.fc2 = nn.Linear(128, 10)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = F.relu(x)
+        x = self.conv2(x)
+        x = F.relu(x)
+        x = F.max_pool2d(x, 2)
+        x = self.dropout1(x)
+        x = torch.flatten(x, 1)
+        x = self.fc1(x)
+        x = F.relu(x)
+        x = self.dropout2(x)
+        x = self.fc2(x)
+        output = F.log_softmax(x, dim=1)
+        return output
 
 
 class ConvNet(nn.Module):
@@ -52,10 +81,15 @@ class ConvNet(nn.Module):
 
 
 def train(gpu, args):
+    #gpu = 0
     rank = args.nr * args.gpus + gpu
-    dist.init_process_group(backend='nccl', init_method='env://', world_size=args.world_size, rank=rank)
+    print("rank: " + str(rank))
+    
+    dist.init_process_group(backend='gloo', init_method='env://', world_size=args.world_size, rank=rank)
     torch.manual_seed(0)
-    model = ConvNet()
+    #model = ConvNet()
+    #model = MyModel()
+    model = models.vgg16()
     torch.cuda.set_device(gpu)
     model.cuda(gpu)
     batch_size = 100
@@ -65,10 +99,15 @@ def train(gpu, args):
     # Wrap the model
     model = nn.parallel.DistributedDataParallel(model, device_ids=[gpu])
     # Data loading code
-    train_dataset = torchvision.datasets.MNIST(root='./data',
+    train_dataset = torchvision.datasets.ImageNet(root='./data',
                                                train=True,
                                                transform=transforms.ToTensor(),
                                                download=True)
+
+    #train_dataset = torchvision.datasets.MNIST(root='./data',
+    #                                           train=True,
+    #                                           transform=transforms.ToTensor(),
+    #                                           download=True)
     train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset,
                                                                     num_replicas=args.world_size,
                                                                     rank=rank)
