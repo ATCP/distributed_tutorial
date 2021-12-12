@@ -232,7 +232,7 @@ def train(args):
     torch.manual_seed(0)
     #model = ConvNet()
     #model = MyModel()
-    model = VGG16(num_features=784, num_classes=10)
+    model = VGG16(num_features=1024, num_classes=10)
 
     torch.cuda.set_device(gpu)
     model.cuda(gpu)
