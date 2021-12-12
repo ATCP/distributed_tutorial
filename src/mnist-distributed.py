@@ -232,11 +232,11 @@ def train(args):
     torch.manual_seed(0)
     #model = ConvNet()
     #model = MyModel()
-    model = VGG16(num_features=2048, num_classes=10)
+    model = VGG16(num_features=1024, num_classes=10)
 
     torch.cuda.set_device(gpu)
     model.cuda(gpu)
-    batch_size = 50
+    batch_size = 25
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda(gpu)
     optimizer = torch.optim.SGD(model.parameters(), 1e-4)
