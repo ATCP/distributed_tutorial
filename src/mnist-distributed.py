@@ -236,7 +236,7 @@ def train(args):
 
     torch.cuda.set_device(gpu)
     model.cuda(gpu)
-    batch_size = 100
+    batch_size = 50
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda(gpu)
     optimizer = torch.optim.SGD(model.parameters(), 1e-4)
@@ -247,7 +247,7 @@ def train(args):
     #                                           train=True,
     #                                           transform=transforms.ToTensor(),
     #                                           download=True)
-    train_dataset = datasets.CIFAR10(root='./data', 
+    train_dataset = torchvision.datasets.CIFAR10(root='./data', 
                                     train=True, 
                                     transform=transforms.ToTensor(),
                                     download=True)
@@ -257,15 +257,15 @@ def train(args):
     #                                           transform=transforms.ToTensor(),
     #                                           download=True)
     
-    #train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset,
-    #                                                                num_replicas=args.world_size,
-    #                                                                rank=rank)
+    train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset,
+                                                                    num_replicas=args.world_size,
+                                                                    rank=rank)
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                                batch_size=batch_size,
                                                shuffle=False,
                                                num_workers=0,
-                                               pin_memory=True)
-                                              # sampler=train_sampler)
+                                               pin_memory=True, 
+                                               sampler=train_sampler)
 
     start = datetime.now()
     total_step = len(train_loader)
@@ -274,7 +274,7 @@ def train(args):
             images = images.cuda(non_blocking=True)
             labels = labels.cuda(non_blocking=True)
             # Forward pass
-            outputs = model(images)
+            outputs, probas = model(images)
             loss = criterion(outputs, labels)
 
             # Backward and optimize
