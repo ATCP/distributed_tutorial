@@ -10,6 +10,11 @@ import torch.distributed as dist
 #from apex.parallel import DistributedDataParallel as DDP
 #from apex import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
+<<<<<<< HEAD
+=======
+import torch.nn.functional as F
+
+>>>>>>> 9a0f43a9c031c211e1f032f5d00c6dfc878bff67
 
 
 def main():
